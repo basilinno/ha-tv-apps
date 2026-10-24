@@ -17,6 +17,8 @@ AUDIO_SINK="$(opt audio_sink)"
 EXTRA_ARGS="$(opt extra_args)"
 DEBUG="$(opt debug)"
 GST_DEBUG_OPT="$(opt gst_debug)"
+CEC_SWITCH="$(opt cec_switch_input)"
+CEC_DEVICE="$(opt cec_device)"
 
 log "uxplay $(dpkg-query -W -f='${Version}' uxplay 2>/dev/null || echo '?')"
 
@@ -63,6 +65,57 @@ restore_console() {
     console_write '\033[?25h\033[?5h\033[?5l'
 }
 
+# --- HDMI-CEC: switch the TV to the Pi when mirroring starts ---------------
+# <Image View On> wakes the TV / leaves its menus, <Active Source> with the
+# Pi's physical address makes it select this HDMI input. TVs expect the
+# latter from a playback device, so the app claims one if the adapter is
+# unconfigured. If another client (e.g. an HA integration) already set up
+# logical addresses, they are left alone and the messages go out as that
+# address (best effort), since reconfiguring would break that client.
+cec_field() { awk -F': *' -v k="$1" '$1 ~ "^[[:space:]]*" k "[[:space:]]*$" {print $2; exit}'; }
+
+cec_setup() {
+    [[ "$CEC_SWITCH" == "true" ]] || return 0
+    local info las
+    if ! info="$(cec-ctl -d "$CEC_DEVICE" 2>&1)"; then
+        log "cec: can't use $CEC_DEVICE (${info##*$'\n'}); input switching off"
+        CEC_SWITCH=false
+        return 0
+    fi
+    las="$(cec_field "Logical Addresses" <<< "$info")"
+    if [[ "${las%% *}" == "0" || -z "$las" ]]; then
+        if cec-ctl -d "$CEC_DEVICE" -s --playback --osd-name "${NAME:0:14}" > /dev/null 2>&1; then
+            log "cec: $CEC_DEVICE configured as playback device \"${NAME:0:14}\" ($(cec-ctl -d "$CEC_DEVICE" -s -L 2>/dev/null | tr '\n' ' '))"
+        else
+            log "cec: configuring $CEC_DEVICE as playback device failed; sending anyway"
+        fi
+    else
+        log "cec: $CEC_DEVICE already configured by another client ($(grep -E 'Logical Address  +:' <<< "$info" | sed 's/.*: //' | paste -sd, -)); using it as is"
+    fi
+    log "cec: physical address $(cec_field "Physical Address" <<< "$info")"
+}
+
+cec_switch_input() {
+    [[ "$CEC_SWITCH" == "true" ]] || return 0
+    local pa out
+    out="$(cec-ctl -d "$CEC_DEVICE" -s --to 0 --image-view-on 2>&1)" || log "cec: image-view-on failed: ${out##*$'\n'}"
+    pa="$(cec-ctl -d "$CEC_DEVICE" 2>/dev/null | cec_field "Physical Address")"
+    if [[ -z "$pa" || "$pa" == "f.f.f.f" ]]; then
+        # A TV that was off may only now report our address via EDID.
+        sleep 2
+        pa="$(cec-ctl -d "$CEC_DEVICE" 2>/dev/null | cec_field "Physical Address")"
+    fi
+    if [[ -z "$pa" || "$pa" == "f.f.f.f" ]]; then
+        log "cec: no physical address on $CEC_DEVICE; can't send active-source"
+        return 0
+    fi
+    if out="$(cec-ctl -d "$CEC_DEVICE" -s --active-source "phys-addr=$pa" 2>&1)"; then
+        log "cec: switched TV to this input ($pa)"
+    else
+        log "cec: active-source failed: ${out##*$'\n'}"
+    fi
+}
+
 # UxPlay's mirroring video arrives on TCP 7100 (0x1BBC); an ESTABLISHED (01)
 # socket there means a session is on screen. Audio-only AirPlay doesn't use it.
 mirroring_active() {
@@ -74,7 +127,10 @@ watch_console() {
     restore_console
     while sleep 1; do
         if mirroring_active; then
-            [[ "$blanked" == false ]] && { blank_console; blanked=true; log "mirroring started: console blanked"; }
+            if [[ "$blanked" == false ]]; then
+                blank_console; blanked=true; log "mirroring started: console blanked"
+                cec_switch_input &
+            fi
         elif [[ "$blanked" == true ]]; then
             restore_console; blanked=false; log "mirroring stopped: console restored"
         fi
@@ -157,6 +213,7 @@ if [[ -n "$EXTRA_ARGS" ]]; then
     ARGS+=("${EXTRA[@]}")
 fi
 
+cec_setup
 watch_console &
 
 # UxPlay 1.71 has been seen to segfault (exit 139) when a session ends; keep

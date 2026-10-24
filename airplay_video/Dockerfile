@@ -18,6 +18,7 @@ RUN apt-get update \
         gstreamer1.0-pulseaudio \
         gstreamer1.0-tools \
         libdrm-tests \
+        v4l-utils \
     && rm -rf /var/lib/apt/lists/*
 
 COPY rootfs /

@@ -1,5 +1,5 @@
 name: AirPlay Video Receiver
-version: "0.2.0"
+version: "0.3.0"
 slug: airplay_video
 description: Turn the Raspberry Pi's HDMI output into an AirPlay screen-mirroring receiver (UxPlay)
 url: https://github.com/basilinno/ha-tv-apps
@@ -19,6 +19,8 @@ devices:
   - /dev/dri/card1
   - /dev/dri/renderD128
   - /dev/fb0
+  - /dev/cec0
+  - /dev/cec1
 options:
   name: AirPlay TV
   video_sink: kmssink
@@ -29,6 +31,8 @@ options:
   extra_args: ""
   debug: false
   gst_debug: ""
+  cec_switch_input: true
+  cec_device: /dev/cec0
 schema:
   name: str
   video_sink: list(kmssink|fbdevsink|autovideosink)
@@ -39,3 +43,5 @@ schema:
   extra_args: str?
   debug: bool
   gst_debug: str?
+  cec_switch_input: bool
+  cec_device: str
