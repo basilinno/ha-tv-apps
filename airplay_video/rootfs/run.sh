@@ -82,6 +82,7 @@ cec_setup() {
         CEC_SWITCH=false
         return 0
     fi
+    log "cec: $CEC_DEVICE driver $(cec_field "Driver Name" <<< "$info"), $(cec_field "Available Logical Addresses" <<< "$info") logical address(es) available"
     las="$(cec_field "Logical Addresses" <<< "$info")"
     if [[ "${las%% *}" == "0" || -z "$las" ]]; then
         if cec-ctl -d "$CEC_DEVICE" -s --playback --osd-name "${NAME:0:14}" > /dev/null 2>&1; then
