@@ -1,0 +1,40 @@
+name: AirPlay Video Receiver
+version: "0.1.9"
+slug: airplay_video
+description: Turn the Raspberry Pi's HDMI output into an AirPlay screen-mirroring receiver (UxPlay)
+url: https://github.com/basilinno/ha-tv-apps
+arch:
+  - aarch64
+startup: application
+boot: auto
+init: true
+# mDNS advertisement and the AirPlay ports (7000/7001/7100 TCP, 6000/6001/7011 UDP)
+# need the host's network namespace.
+host_network: true
+host_dbus: false
+audio: true
+video: true
+devices:
+  - /dev/dri/card0
+  - /dev/dri/card1
+  - /dev/dri/renderD128
+  - /dev/fb0
+  - /dev/tty1
+options:
+  name: AirPlay TV
+  video_sink: kmssink
+  hardware_decode: true
+  resolution: 1920x1080
+  fps: 30
+  audio_sink: pulsesink
+  extra_args: ""
+  debug: false
+schema:
+  name: str
+  video_sink: list(kmssink|fbdevsink|autovideosink)
+  hardware_decode: bool
+  resolution: match(^\d{3,4}x\d{3,4}$)
+  fps: int(1,60)
+  audio_sink: list(pulsesink|alsasink|autoaudiosink)
+  extra_args: str?
+  debug: bool
