@@ -72,7 +72,9 @@ restore_console() {
 # unconfigured. If another client (e.g. an HA integration) already set up
 # logical addresses, they are left alone and the messages go out as that
 # address (best effort), since reconfiguring would break that client.
-cec_field() { awk -F': *' -v k="$1" '$1 ~ "^[[:space:]]*" k "[[:space:]]*$" {print $2; exit}'; }
+# Value of a "Name : value" line. NF > 1 skips the capability list, where
+# names such as "Logical Addresses" appear on their own without a value.
+cec_field() { awk -F': *' -v k="$1" 'NF > 1 && $1 ~ "^[[:space:]]*" k "[[:space:]]*$" {print $2; exit}'; }
 
 cec_setup() {
     [[ "$CEC_SWITCH" == "true" ]] || return 0
@@ -82,7 +84,7 @@ cec_setup() {
         CEC_SWITCH=false
         return 0
     fi
-    log "cec: $CEC_DEVICE driver $(cec_field "Driver Name" <<< "$info"), $(cec_field "Available Logical Addresses" <<< "$info") logical address(es) available"
+    log "cec: $CEC_DEVICE driver $(cec_field "Driver( Name)?" <<< "$info"), $(cec_field "Available Logical Addresses" <<< "$info") logical address(es) available"
     las="$(cec_field "Logical Addresses" <<< "$info")"
     if [[ "${las%% *}" == "0" || -z "$las" ]]; then
         if cec-ctl -d "$CEC_DEVICE" -s --playback --osd-name "${NAME:0:14}" > /dev/null 2>&1; then
@@ -94,6 +96,19 @@ cec_setup() {
         log "cec: $CEC_DEVICE already configured by another client ($(grep -E 'Logical Address  +:' <<< "$info" | sed 's/.*: //' | paste -sd, -)); using it as is"
     fi
     log "cec: physical address $(cec_field "Physical Address" <<< "$info")"
+    cec_log_bus &
+}
+
+# Poll every logical address and log who answered, e.g. "0.0.0.0: TV".
+# Each address can be taken by only one device on the bus, so this shows
+# what is in the way when a type can't be claimed.
+cec_log_bus() {
+    local out devs
+    out="$(cec-ctl -d "$CEC_DEVICE" -s -S 2>/dev/null)"
+    # "System Information for device 5 (Audio System) from device 8 (...)"
+    devs="$(sed -nE 's/^[[:space:]]*System Information for device ([0-9]+ \([^)]*\)).*/\1/p' <<< "$out" | paste -sd ',' - | sed 's/,/, /g')"
+    log "cec: devices on the bus: ${devs:-none found}"
+    log "cec: topology: $(sed -n '/^Topology:/,$p' <<< "$out" | grep -E '[0-9a-f]\.[0-9a-f]\.[0-9a-f]\.[0-9a-f]: ' | sed 's/^[[:space:]]*//' | paste -sd ';' -)"
 }
 
 cec_switch_input() {
