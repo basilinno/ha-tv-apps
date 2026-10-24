@@ -9,11 +9,13 @@ straight to the display (`kmssink`). No desktop or X server is needed.
 
 ## Status
 
-Early development. Tested on a Pi 4 (4 GB) running HA OS 2026.6.
+Early development. Tested on a Pi 4 (4 GB) running HA OS 2026.6 with an iPhone:
+portrait and landscape mirroring, rotation mid-session, letterboxing. The HA
+console on the HDMI output is hidden while mirroring and comes back afterwards.
 
 | | Pi 4 | Pi 5 |
 |---|---|---|
-| H.264 decode | hardware (`bcm2835-codec`, `-v4l2`) or software | software only (the Pi 5 has no H.264 block) |
+| H.264 decode | software by default (~20% CPU); hardware optional | software (the Pi 5 has no H.264 block) |
 | Video output | `kmssink` on vc4 | `kmssink` on vc4 (untested) |
 
 ## Install
@@ -28,7 +30,7 @@ Early development. Tested on a Pi 4 (4 GB) running HA OS 2026.6.
 |---|---|---|
 | `name` | `AirPlay TV` | Name shown on Apple devices |
 | `video_sink` | `kmssink` | `fbdevsink` is a fallback if KMS output misbehaves |
-| `hardware_decode` | `true` | Uses the Pi 4's H.264 decoder when present |
+| `decoder` | `software` | `software`: frame-threaded `avdec_h264`, smooth in portrait and landscape. `hardware`: the Pi 4's H.264 block; lighter on CPU but portrait drops most frames |
 | `resolution` | `1920x1080` | Requested from the sender |
 | `fps` | `30` | Maximum frame rate |
 | `audio_sink` | `pulsesink` | Pick the HDMI output in the app's Audio settings |
