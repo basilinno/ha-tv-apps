@@ -125,10 +125,49 @@ cec_switch_input() {
         log "cec: no physical address on $CEC_DEVICE; can't send active-source"
         return 0
     fi
+    local info type restore=()
+    info="$(cec-ctl -d "$CEC_DEVICE" 2>/dev/null)"
+    type="$(cec_field "Logical Address Type" <<< "$info")"
+    case "$type" in
+        Playback|Tuner|Record) ;;
+        *)
+            # Some TVs (seen on a Hisense) ignore <Active Source> unless it
+            # comes from a playback address. The adapter has a single logical
+            # address, so borrow it: claim playback, switch, then re-register
+            # the other client's (e.g. an Audio System) type, name and vendor.
+            restore=(--cec-version-1.4)
+            [[ "$(cec_field "CEC Version" <<< "$info")" == "2.0" ]] && restore=()
+            case "$type" in
+                "Audio System") restore+=(--audio) ;;
+                TV)             restore+=(--tv) ;;
+                Processor)      restore+=(--processor) ;;
+                *)              restore=() ;;
+            esac
+            if (( ${#restore[@]} )); then
+                local vendor osd
+                osd="$(cec_field "OSD Name" <<< "$info")"; osd="${osd//\'/}"
+                vendor="$(cec_field "Vendor ID" <<< "$info")"
+                [[ -n "$osd" ]] && restore+=(--osd-name "$osd")
+                [[ "$vendor" =~ ^0x[0-9a-fA-F]+$ ]] && restore+=(--vendor-id "$vendor")
+                cec-ctl -d "$CEC_DEVICE" -s -C > /dev/null 2>&1
+                cec-ctl -d "$CEC_DEVICE" -s --playback --osd-name "${NAME:0:14}" > /dev/null 2>&1 \
+                    || log "cec: couldn't borrow a playback address"
+            fi
+            ;;
+    esac
     if out="$(cec-ctl -d "$CEC_DEVICE" -s --active-source "phys-addr=$pa" 2>&1)"; then
-        log "cec: switched TV to this input ($pa)"
+        log "cec: switched TV to this input ($pa)${restore:+ from a borrowed playback address}"
     else
         log "cec: active-source failed: ${out##*$'\n'}"
+    fi
+    if (( ${#restore[@]} )); then
+        sleep 1
+        cec-ctl -d "$CEC_DEVICE" -s -C > /dev/null 2>&1
+        if cec-ctl -d "$CEC_DEVICE" -s "${restore[@]}" > /dev/null 2>&1; then
+            log "cec: restored $CEC_DEVICE as $type ($(cec-ctl -d "$CEC_DEVICE" -s -L 2>/dev/null | tr -s ' \n' ' '))"
+        else
+            log "cec: restoring $CEC_DEVICE as $type failed (${restore[*]})"
+        fi
     fi
 }
 

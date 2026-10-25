@@ -36,6 +36,17 @@ console on the HDMI output is hidden while mirroring and comes back afterwards.
 | `audio_sink` | `pulsesink` | Pick the HDMI output in the app's Audio settings |
 | `extra_args` | | Passed through to `uxplay` |
 | `debug` | `false` | UxPlay `-d` plus `GST_DEBUG=2` |
+| `cec_switch_input` | `true` | Wake the TV and switch it to the Pi's input over HDMI-CEC when mirroring starts |
+| `cec_device` | `/dev/cec0` | CEC adapter of the HDMI port the TV is on |
+
+### HDMI-CEC
+
+The Pi's CEC adapter has a single logical address. If nothing else uses it, the
+app registers as a playback device. If another client already registered it
+(e.g. an integration acting as an Audio System for the TV's volume keys), the
+app leaves it in place and only borrows a playback address for the moment it
+switches the TV's input, since many TVs ignore input switching from any other
+device type.
 
 ## Development
 
