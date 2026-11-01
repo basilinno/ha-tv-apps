@@ -13,13 +13,14 @@ it comes back when the session ends.
 
 ## Requirements
 
-- Raspberry Pi 4 or 5 running Home Assistant OS, with the TV on an HDMI port.
+- Raspberry Pi 4 running Home Assistant OS, with the TV on an HDMI port. The Pi 5
+  should work but hasn't been tested yet.
 - The Apple device on the same network as the Pi (AirPlay is found over mDNS).
 
-| | Pi 4 | Pi 5 |
+| | Pi 4 (tested) | Pi 5 (untested) |
 |---|---|---|
 | H.264 decode | software by default (~20% CPU); hardware optional | software (the Pi 5 has no H.264 decoder) |
-| Video output | `kmssink` on vc4 | `kmssink` on vc4 (not yet tested) |
+| Video output | `kmssink` on vc4 | `kmssink` on vc4 |
 
 ## Setup
 

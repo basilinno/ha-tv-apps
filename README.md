@@ -24,7 +24,8 @@ AirPlay app asks it to switch inputs.
    and add `https://github.com/basilinno/ha-tv-apps`.
 2. Install the apps you want from the store and start them.
 
-Supported: Raspberry Pi 4 and 5 (`aarch64`) on Home Assistant OS.
+Tested on a Raspberry Pi 4 running Home Assistant OS. The Raspberry Pi 5 should work
+but hasn't been tested yet ([#5](https://github.com/basilinno/ha-tv-apps/issues/5)).
 
 ## Development
 

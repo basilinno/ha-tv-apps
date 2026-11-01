@@ -77,7 +77,7 @@ doesn't know the real volume of whatever the automation controls.
 
 | Option | Default | Notes |
 |---|---|---|
-| `device` | `/dev/cec0` | CEC adapter of the HDMI port the TV is on (`/dev/cec1` for the second port of a Pi 4 or 5) |
+| `device` | `/dev/cec0` | CEC adapter of the HDMI port the TV is on (`/dev/cec1` for the Pi 4's second port) |
 | `device_type` | `audio_system` | `audio_system`: receives the volume keys. `playback`: a plain source device, no volume keys |
 | `osd_name` | `Home Assistant` | Name the TV shows for the Pi (up to 14 characters) |
 | `event_type` | `hdmi_cec_command` | Event type fired for the volume keys |
