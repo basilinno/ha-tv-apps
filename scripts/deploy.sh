@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 # Copy an app into the Home Assistant box's /addons folder (local apps).
 #   scripts/deploy.sh airplay_video|hdmi_cec
 # After the first deploy, install it once (scripts/ha.sh store reload, then

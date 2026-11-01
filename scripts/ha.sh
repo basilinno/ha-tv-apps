@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 # Run the `ha` CLI on the Home Assistant box through the SSH app.
 # The SSH app holds a Supervisor token in its s6 environment, but login shells
 # don't get it, so it is exported for this one command.

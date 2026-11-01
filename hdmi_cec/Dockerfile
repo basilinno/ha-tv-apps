@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 # Pinned on purpose, like the AirPlay app: the Supervisor passes its own base
 # as BUILD_FROM. The daemon needs nothing beyond the Python standard library.
 FROM alpine:3.22

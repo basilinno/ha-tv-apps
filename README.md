@@ -1,3 +1,8 @@
+<!--
+Copyright (c) 2026 Basil Innovations LLC.
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Home Assistant apps for the TV
 
 Home Assistant apps (add-ons) for a Raspberry Pi running Home Assistant OS that is

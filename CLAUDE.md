@@ -1,3 +1,8 @@
+<!--
+Copyright (c) 2026 Basil Innovations LLC.
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # ha-tv-apps
 
 Home Assistant apps (add-ons) for a Raspberry Pi connected to a TV. The repo root is
@@ -9,6 +14,12 @@ an HA app repository (`repository.yaml`) with two apps:
 
 Local test-box details (host, SSH user, other devices) are in `CLAUDE.local.md` and
 `.env`, both gitignored. Nothing personal (names, IPs, hostnames) goes into tracked files.
+
+Every tracked text file starts with the header below (after a shebang; as an HTML
+comment in Markdown). The `check-copyright` pre-commit hook enforces it.
+
+    # Copyright (c) 2026 Basil Innovations LLC.
+    # SPDX-License-Identifier: Apache-2.0
 
 ## Layout
 
@@ -26,6 +37,10 @@ Local test-box details (host, SSH user, other devices) are in `CLAUDE.local.md` 
 - `scripts/ha.sh`: `ha` CLI and Supervisor API on the test box
   (`install|rebuild|update|start|stop|restart|logs|info <slug>`, `api METHOD PATH`)
 - `.github/workflows/build.yaml`: builds and pushes the aarch64 images to GHCR
+- `.github/workflows/checks.yaml`: runs the pre-commit hooks on every push and PR
+- `.pre-commit-config.yaml`, `scripts/check_copyright.py`: copyright header check on
+  every text file, ruff (lint + format) and mypy. Install with `pre-commit install`.
+- `LICENSE` (Apache-2.0), `NOTICE` (copyright and the third-party software in the images)
 
 ## Test box
 

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 # Entry point: start D-Bus + Avahi for mDNS, then run UxPlay with options
 # from the app's Configuration tab (/data/options.json).
 set -euo pipefail

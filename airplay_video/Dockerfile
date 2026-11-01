@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 # Pinned on purpose: the Supervisor passes its Alpine base as BUILD_FROM,
 # but uxplay and its GStreamer stack come from Debian.
 FROM debian:trixie-slim

@@ -1,3 +1,8 @@
+<!--
+Copyright (c) 2026 Basil Innovations LLC.
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Changelog
 
 ## 0.2.0

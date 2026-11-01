@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 """HDMI-CEC app: the single owner of the Pi's CEC adapter.
 
 The vc4 adapter has one logical address, so only one client can usefully
@@ -101,8 +103,11 @@ VOLUME_STEP = 5
 
 
 def format_pa(pa):
-    return "f.f.f.f" if pa == CEC_PHYS_ADDR_INVALID else ".".join(
-        f"{(pa >> s) & 0xF:x}" for s in (12, 8, 4, 0))
+    return (
+        "f.f.f.f"
+        if pa == CEC_PHYS_ADDR_INVALID
+        else ".".join(f"{(pa >> s) & 0xF:x}" for s in (12, 8, 4, 0))
+    )
 
 
 class Adapter:
@@ -112,8 +117,11 @@ class Adapter:
         self.path = path
         self.fd = os.open(path, os.O_RDWR)
         try:
-            fcntl.ioctl(self.fd, CEC_S_MODE,
-                        struct.pack("<I", CEC_MODE_EXCL_INITIATOR | CEC_MODE_EXCL_FOLLOWER))
+            fcntl.ioctl(
+                self.fd,
+                CEC_S_MODE,
+                struct.pack("<I", CEC_MODE_EXCL_INITIATOR | CEC_MODE_EXCL_FOLLOWER),
+            )
         except OSError:
             os.close(self.fd)
             raise
@@ -137,16 +145,38 @@ class Adapter:
         or at once if the TV gives no physical address (the core claims it
         when one appears).
         """
-        fcntl.ioctl(self.fd, CEC_ADAP_S_LOG_ADDRS,
-                    bytearray(struct.calcsize(LOG_ADDRS_FMT)))
+        fcntl.ioctl(
+            self.fd, CEC_ADAP_S_LOG_ADDRS, bytearray(struct.calcsize(LOG_ADDRS_FMT))
+        )
         prim, la_type = DEVICE_TYPES[device_type]
-        buf = bytearray(struct.pack(
-            LOG_ADDRS_FMT,
-            CEC_LOG_ADDR_INVALID, CEC_LOG_ADDR_INVALID,
-            CEC_LOG_ADDR_INVALID, CEC_LOG_ADDR_INVALID,
-            0, CEC_VERSION_1_4, 1, vendor_id, 0,
-            osd_name.encode()[:14],
-            prim, 0, 0, 0, la_type, 0, 0, 0, 0, 0, 0, 0, b"\0" * 48))
+        buf = bytearray(
+            struct.pack(
+                LOG_ADDRS_FMT,
+                CEC_LOG_ADDR_INVALID,
+                CEC_LOG_ADDR_INVALID,
+                CEC_LOG_ADDR_INVALID,
+                CEC_LOG_ADDR_INVALID,
+                0,
+                CEC_VERSION_1_4,
+                1,
+                vendor_id,
+                0,
+                osd_name.encode()[:14],
+                prim,
+                0,
+                0,
+                0,
+                la_type,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                b"\0" * 48,
+            )
+        )
         fcntl.ioctl(self.fd, CEC_ADAP_S_LOG_ADDRS, buf)
         return self.log_addr()
 
@@ -156,8 +186,11 @@ class Adapter:
             log.warning("not sending 0x%02x: no logical address", opcode)
             return False
         payload = bytes([(src << 4) | dest, opcode]) + bytes(params)
-        buf = bytearray(struct.pack(MSG_FMT, 0, 0, len(payload), 0, 0, 0,
-                                    payload, 0, 0, 0, 0, 0, 0, 0))
+        buf = bytearray(
+            struct.pack(
+                MSG_FMT, 0, 0, len(payload), 0, 0, 0, payload, 0, 0, 0, 0, 0, 0, 0
+            )
+        )
         try:
             fcntl.ioctl(self.fd, CEC_TRANSMIT, buf)
         except OSError as e:
@@ -166,8 +199,14 @@ class Adapter:
         tx_status = struct.unpack(MSG_FMT, buf)[9]
         # A broadcast is never acknowledged, so only a directed NACK is an error.
         ok = bool(tx_status & CEC_TX_STATUS_OK) or dest == BROADCAST
-        log.debug("tx %x->%x 0x%02x %s status 0x%02x", src, dest, opcode,
-                  bytes(params).hex(), tx_status)
+        log.debug(
+            "tx %x->%x 0x%02x %s status 0x%02x",
+            src,
+            dest,
+            opcode,
+            bytes(params).hex(),
+            tx_status,
+        )
         return ok
 
     def power_status(self, dest=TV):
@@ -180,8 +219,25 @@ class Adapter:
         if src == CEC_LOG_ADDR_INVALID:
             return None
         payload = bytes([(src << 4) | dest, MSG_GIVE_DEVICE_POWER_STATUS])
-        buf = bytearray(struct.pack(MSG_FMT, 0, 0, len(payload), 1000, 0, 0,
-                                    payload, MSG_REPORT_POWER_STATUS, 0, 0, 0, 0, 0, 0))
+        buf = bytearray(
+            struct.pack(
+                MSG_FMT,
+                0,
+                0,
+                len(payload),
+                1000,
+                0,
+                0,
+                payload,
+                MSG_REPORT_POWER_STATUS,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            )
+        )
         try:
             fcntl.ioctl(self.fd, CEC_TRANSMIT, buf)
         except OSError:
@@ -230,9 +286,14 @@ class HomeAssistant:
         while True:
             data = self.events.get()
             req = urllib.request.Request(
-                self.url, data=json.dumps(data).encode(), method="POST",
-                headers={"Authorization": f"Bearer {self.token}",
-                         "Content-Type": "application/json"})
+                self.url,
+                data=json.dumps(data).encode(),
+                method="POST",
+                headers={
+                    "Authorization": f"Bearer {self.token}",
+                    "Content-Type": "application/json",
+                },
+            )
             try:
                 urllib.request.urlopen(req, timeout=5).close()
             except OSError as e:
@@ -257,10 +318,14 @@ class Cec:
         # Until then, the TV's <Request Active Source> gets this input.
         self.claim_until = 0
         la = self.adapter.configure(self.device_type, self.osd_name, self.vendor_id)
-        log.info("%s: %s \"%s\", logical address %s, physical address %s",
-                 self.adapter.path, self.device_type, self.osd_name,
-                 "none yet" if la == CEC_LOG_ADDR_INVALID else la,
-                 format_pa(self.adapter.phys_addr()))
+        log.info(
+            '%s: %s "%s", logical address %s, physical address %s',
+            self.adapter.path,
+            self.device_type,
+            self.osd_name,
+            "none yet" if la == CEC_LOG_ADDR_INVALID else la,
+            format_pa(self.adapter.phys_addr()),
+        )
 
     def status(self):
         la = self.adapter.log_addr()
@@ -296,9 +361,11 @@ class Cec:
         A TV that doesn't answer <Give Device Power Status> counts as on, so
         it isn't kept waiting for an answer that never comes.
         """
-        return (power in (POWER_ON, None)
-                and self.adapter.phys_addr() != CEC_PHYS_ADDR_INVALID
-                and self.adapter.log_addr() != CEC_LOG_ADDR_INVALID)
+        return (
+            power in (POWER_ON, None)
+            and self.adapter.phys_addr() != CEC_PHYS_ADDR_INVALID
+            and self.adapter.log_addr() != CEC_LOG_ADDR_INVALID
+        )
 
     def wait_for_tv(self, woke):
         """Wait for a TV that was off or booting to come up.
@@ -332,8 +399,11 @@ class Cec:
             # Give the TV time to act on it before the address goes away.
             time.sleep(0.5)
             self.adapter.configure(self.device_type, self.osd_name, self.vendor_id)
-        log.info("switched TV to this input (%s)%s", format_pa(pa),
-                 " from a borrowed playback address" if borrowed else "")
+        log.info(
+            "switched TV to this input (%s)%s",
+            format_pa(pa),
+            " from a borrowed playback address" if borrowed else "",
+        )
         return {"ok": ok, "physical_address": format_pa(pa), "borrowed": borrowed}
 
     def answer_request_active_source(self):
@@ -342,8 +412,11 @@ class Cec:
 
     # --- the TV's messages ------------------------------------------------
     def report_audio_status(self, dest):
-        self.adapter.transmit(dest, MSG_REPORT_AUDIO_STATUS,
-                              [(self.volume & 0x7F) | (0x80 if self.muted else 0)])
+        self.adapter.transmit(
+            dest,
+            MSG_REPORT_AUDIO_STATUS,
+            [(self.volume & 0x7F) | (0x80 if self.muted else 0)],
+        )
 
     def handle(self, src, dest, opcode, params):
         log.debug("rx %x->%x 0x%02x %s", src, dest, opcode, params.hex())
@@ -367,8 +440,9 @@ class Cec:
             # ignore a switch that came earlier.
             if time.monotonic() < self.claim_until:
                 log.info("TV asked for the active source")
-                threading.Thread(target=self.answer_request_active_source,
-                                 daemon=True).start()
+                threading.Thread(
+                    target=self.answer_request_active_source, daemon=True
+                ).start()
         elif opcode == MSG_GIVE_DEVICE_POWER_STATUS:
             self.adapter.transmit(src, MSG_REPORT_POWER_STATUS, [0x00])
         elif not audio:
@@ -389,8 +463,11 @@ class Cec:
                 kind, data = self.adapter.event()
                 if kind == CEC_EVENT_STATE_CHANGE:
                     pa, la_mask = struct.unpack_from("<HH", data)
-                    log.info("adapter state: physical address %s, logical addresses 0x%04x",
-                             format_pa(pa), la_mask)
+                    log.info(
+                        "adapter state: physical address %s, logical addresses 0x%04x",
+                        format_pa(pa),
+                        la_mask,
+                    )
                 elif kind == CEC_EVENT_LOST_MSGS:
                     log.warning("lost %d messages", struct.unpack_from("<I", data)[0])
             if readable:
@@ -449,7 +526,8 @@ def main():
         options = json.load(f)
     logging.basicConfig(
         level=logging.DEBUG if options.get("debug") else logging.INFO,
-        format="[hdmi_cec] %(levelname)s %(message)s")
+        format="[hdmi_cec] %(levelname)s %(message)s",
+    )
     while True:
         try:
             cec = Cec(options)

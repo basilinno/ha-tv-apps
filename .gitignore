@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 .env
 CLAUDE.local.md
 .DS_Store

@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 configuration:
   device:
     name: CEC device

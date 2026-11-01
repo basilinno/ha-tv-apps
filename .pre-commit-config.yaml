@@ -1,0 +1,25 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
+repos:
+  - repo: local
+    hooks:
+      # Every tracked text file carries the header; LICENSE is the license text itself.
+      - id: check-copyright
+        name: check copyright header
+        language: python
+        entry: python scripts/check_copyright.py
+        types: [text]
+        exclude: ^LICENSE$
+        pass_filenames: true
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.3
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.4.1
+    hooks:
+      - id: mypy

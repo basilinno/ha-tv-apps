@@ -1,3 +1,8 @@
+<!--
+Copyright (c) 2026 Basil Innovations LLC.
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # HDMI-CEC
 
 Lets the Raspberry Pi talk to the TV over HDMI-CEC. The Pi's CEC adapter has a single

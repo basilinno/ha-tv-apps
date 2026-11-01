@@ -1,3 +1,8 @@
+<!--
+Copyright (c) 2026 Basil Innovations LLC.
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # AirPlay Video Receiver
 
 Turn the Raspberry Pi's HDMI output into an AirPlay screen-mirroring receiver.

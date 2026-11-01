@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 # Build each app's aarch64 image and push it to GHCR, tagged with the version in
 # its config.yaml (the Supervisor pulls image:version). A version that is
 # already published is left alone, so bump the version to ship a change.

@@ -1,3 +1,8 @@
+<!--
+Copyright (c) 2026 Basil Innovations LLC.
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # AirPlay Video Receiver
 
 Mirror an iPhone, iPad or Mac to the TV connected to the Raspberry Pi's HDMI port.

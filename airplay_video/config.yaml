@@ -1,3 +1,5 @@
+# Copyright (c) 2026 Basil Innovations LLC.
+# SPDX-License-Identifier: Apache-2.0
 name: AirPlay Video Receiver
 version: "0.5.0"
 slug: airplay_video
