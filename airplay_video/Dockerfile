@@ -8,6 +8,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         uxplay \
         avahi-daemon \
+        curl \
         dbus \
         jq \
         gstreamer1.0-plugins-base \

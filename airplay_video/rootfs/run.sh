@@ -76,9 +76,18 @@ restore_console() {
 # names such as "Logical Addresses" appear on their own without a value.
 cec_field() { awk -F': *' -v k="$1" 'NF > 1 && $1 ~ "^[[:space:]]*" k "[[:space:]]*$" {print $2; exit}'; }
 
+# The HDMI-CEC app (ha-hdmi-cec), when installed, owns the adapter and does
+# the switch itself; it listens on 127.0.0.1, which host-network apps share.
+CEC_APP=http://127.0.0.1:8686
+cec_app() { curl -fsS -m 10 "$@" 2>&1; }
+
 cec_setup() {
     [[ "$CEC_SWITCH" == "true" ]] || return 0
     local info las
+    if info="$(cec_app "$CEC_APP/status")"; then
+        log "cec: the HDMI-CEC app owns the adapter ($info)"
+        return 0
+    fi
     if ! info="$(cec-ctl -d "$CEC_DEVICE" 2>&1)"; then
         log "cec: can't use $CEC_DEVICE (${info##*$'\n'}); input switching off"
         CEC_SWITCH=false
@@ -114,6 +123,14 @@ cec_log_bus() {
 cec_switch_input() {
     [[ "$CEC_SWITCH" == "true" ]] || return 0
     local pa out
+    if out="$(cec_app -X POST "$CEC_APP/active_source")"; then
+        log "cec: switched TV to this input through the HDMI-CEC app ($out)"
+        return 0
+    elif [[ "$out" != *"Couldn't connect"* && "$out" != *"Failed to connect"* ]]; then
+        # The app is there but the switch failed; don't fight it over the adapter.
+        log "cec: the HDMI-CEC app couldn't switch the TV: $out"
+        return 0
+    fi
     out="$(cec-ctl -d "$CEC_DEVICE" -s --to 0 --image-view-on 2>&1)" || log "cec: image-view-on failed: ${out##*$'\n'}"
     pa="$(cec-ctl -d "$CEC_DEVICE" 2>/dev/null | cec_field "Physical Address")"
     if [[ -z "$pa" || "$pa" == "f.f.f.f" ]]; then

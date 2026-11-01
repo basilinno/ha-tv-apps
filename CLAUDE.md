@@ -74,13 +74,17 @@ repository (`repository.yaml`); the app itself is `airplay_video/`.
 - UxPlay 1.71 segfaulted (exit 139) at the end of a session once; `run.sh` restarts it.
 - HDMI-CEC (`/dev/cec0` is the TV's port; `cec-ctl` from `v4l-utils`):
   - vc4 CEC has one logical address, so the Pi is one device type at a time.
-  - The test box runs `cec_audio`, a custom HA integration that holds Audio System LA 5
-    for the TV's volume keys. The app must never reconfigure an adapter another client
-    configured, except for the borrow below.
+  - The HDMI-CEC app (repo `ha-hdmi-cec`) owns the adapter on the test box: it holds
+    Audio System LA 5 for the TV's volume keys, in exclusive mode. `run.sh` asks it to
+    switch the TV (`POST http://127.0.0.1:8686/active_source`) and only falls back to
+    its own `cec-ctl` path when that API doesn't answer.
   - The Hisense TV wakes on `<Image View On>` from any LA, but ignores `<Active Source>`
     unless it comes from a playback LA, even from a CEC 2.0 LA that declares Playback in
-    `all_device_types`. So `run.sh` borrows the address: claim playback, send Active
-    Source, then re-register the previous type/OSD name/vendor ID. `cec_audio`'s open fd
-    survives it and the volume keys keep working.
+    `all_device_types`. So both paths borrow the address: claim playback, send Active
+    Source, then re-register the previous type/OSD name/vendor ID. The fallback must
+    never otherwise reconfigure an adapter another client configured.
+  - From standby the TV drops hot-plug while it boots, which takes the Pi's addresses
+    away; the HDMI-CEC app waits for the TV to report On before switching. The
+    fallback path doesn't, so it can miss the switch when the TV was off.
   - `cec-ctl` lists "Logical Addresses" twice (a bare capability, then the field);
     `cec_field` skips lines without a value.
