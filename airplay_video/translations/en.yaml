@@ -1,0 +1,34 @@
+configuration:
+  name:
+    name: Receiver name
+    description: Name the receiver shows on iPhones, iPads and Macs.
+  video_sink:
+    name: Video output
+    description: GStreamer video sink. kmssink draws straight to the HDMI output; fbdevsink is a fallback.
+  decoder:
+    name: H.264 decoder
+    description: software is smooth in portrait and landscape. hardware uses the Pi 4's decoder and is lighter on CPU, but drops most frames in portrait.
+  resolution:
+    name: Resolution
+    description: Resolution requested from the sender, e.g. 1920x1080.
+  fps:
+    name: Maximum frame rate
+    description: Highest frame rate requested from the sender.
+  audio_sink:
+    name: Audio output
+    description: GStreamer audio sink. pulsesink follows the app's Audio setting; pick the HDMI output there.
+  extra_args:
+    name: Extra UxPlay arguments
+    description: Passed through to uxplay as is.
+  debug:
+    name: Debug logging
+    description: Very verbose UxPlay and GStreamer logging. Makes the video stutter; use only to diagnose.
+  gst_debug:
+    name: GStreamer log level
+    description: GStreamer logging on its own, e.g. 2 for warnings.
+  cec_switch_input:
+    name: Switch the TV's input
+    description: Wake the TV and switch it to the Pi over HDMI-CEC when mirroring starts.
+  cec_device:
+    name: CEC device
+    description: CEC adapter of the HDMI port the TV is on.

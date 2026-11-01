@@ -1,0 +1,16 @@
+configuration:
+  device:
+    name: CEC device
+    description: CEC adapter of the HDMI port the TV is on (/dev/cec1 for the second port).
+  device_type:
+    name: Device type
+    description: audio_system receives the TV remote's volume keys. playback is a plain source device.
+  osd_name:
+    name: Name on the TV
+    description: Name the TV shows for the Pi (up to 14 characters).
+  event_type:
+    name: Event type
+    description: Home Assistant event fired when a volume key is pressed.
+  debug:
+    name: Debug logging
+    description: Log every CEC message sent and received.

@@ -76,7 +76,7 @@ restore_console() {
 # names such as "Logical Addresses" appear on their own without a value.
 cec_field() { awk -F': *' -v k="$1" 'NF > 1 && $1 ~ "^[[:space:]]*" k "[[:space:]]*$" {print $2; exit}'; }
 
-# The HDMI-CEC app (ha-hdmi-cec), when installed, owns the adapter and does
+# The HDMI-CEC app (hdmi_cec in this repository), when installed, owns the adapter and does
 # the switch itself; it listens on 127.0.0.1, which host-network apps share.
 CEC_APP=http://127.0.0.1:8686
 cec_app() { curl -fsS -m 10 "$@" 2>&1; }

@@ -1,8 +1,9 @@
 name: AirPlay Video Receiver
-version: "0.4.0"
+version: "0.5.0"
 slug: airplay_video
 description: Turn the Raspberry Pi's HDMI output into an AirPlay screen-mirroring receiver (UxPlay)
-url: https://github.com/basilinno/ha-tv-apps
+url: https://github.com/basilinno/ha-tv-apps/tree/main/airplay_video
+image: "ghcr.io/basilinno/{arch}-airplay_video"
 arch:
   - aarch64
 startup: application
