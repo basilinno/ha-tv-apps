@@ -20,6 +20,6 @@ A Home Assistant app that is the single owner of the Pi's HDMI-CEC adapter
   OSD name, vendor ID and CEC version.
 - The AirPlay app calls `POST /active_source` and falls back to its own `cec-ctl`
   path when the API isn't there.
-- It replaces `cec_audio`, the custom integration in `/config/custom_components`,
-  which fired `cec_audio_command`. On the test box `event_type` is set to
-  `cec_audio_command` so the existing DSP automation keeps working.
+- It replaced `cec_audio`, a custom integration that fired `cec_audio_command`; that
+  integration is removed from the test box, and its DSP automation now listens for
+  `hdmi_cec_command`.
