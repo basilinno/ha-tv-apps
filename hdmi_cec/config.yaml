@@ -1,0 +1,29 @@
+name: HDMI-CEC
+version: "0.1.1"
+slug: hdmi_cec
+description: Own the Raspberry Pi's HDMI-CEC adapter; turn the TV's volume keys into Home Assistant events and switch the TV's input on request
+url: https://github.com/basilinno/ha-tv-apps
+arch:
+  - aarch64
+startup: system
+boot: auto
+init: true
+# The API listens on 127.0.0.1, which Home Assistant Core and other
+# host-network apps (e.g. the AirPlay Video Receiver) share with it.
+host_network: true
+homeassistant_api: true
+devices:
+  - /dev/cec0
+  - /dev/cec1
+options:
+  device: /dev/cec0
+  device_type: audio_system
+  osd_name: Home Assistant
+  event_type: hdmi_cec_command
+  debug: false
+schema:
+  device: str
+  device_type: list(audio_system|playback)
+  osd_name: match(^.{1,14}$)
+  event_type: match(^[a-z0-9_]+$)
+  debug: bool
