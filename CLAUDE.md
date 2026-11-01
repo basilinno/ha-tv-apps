@@ -15,6 +15,11 @@ an HA app repository (`repository.yaml`) with two apps:
 Local test-box details (host, SSH user, other devices) are in `CLAUDE.local.md` and
 `.env`, both gitignored. Nothing personal (names, IPs, hostnames) goes into tracked files.
 
+This repository is public. Never put Claude links (claude.ai session URLs or any other
+claude.ai link) in commit messages, issues, issue comments, PR descriptions or PR
+comments, and don't add `Claude-Session:` trailers to commits. GitHub keeps edit history,
+so a link must be left out from the start, not removed afterwards.
+
 Every tracked text file starts with the header below (after a shebang; as an HTML
 comment in Markdown). The `check-copyright` pre-commit hook enforces it.
 
