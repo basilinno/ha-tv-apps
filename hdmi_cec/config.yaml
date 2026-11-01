@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Basil Innovations LLC.
 # SPDX-License-Identifier: Apache-2.0
 name: HDMI-CEC
-version: "0.2.0"
+version: "0.2.1"
 slug: hdmi_cec
 description: "Talk to the TV over HDMI-CEC: volume keys as Home Assistant events, input switching for other apps"
 url: https://github.com/basilinno/ha-tv-apps/tree/main/hdmi_cec

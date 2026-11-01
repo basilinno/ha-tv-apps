@@ -25,7 +25,9 @@ import logging
 import os
 import queue
 import select
+import signal
 import struct
+import sys
 import threading
 import time
 import urllib.request
@@ -528,6 +530,9 @@ def main():
         level=logging.DEBUG if options.get("debug") else logging.INFO,
         format="[hdmi_cec] %(levelname)s %(message)s",
     )
+    # The Supervisor stops the app with SIGTERM; exit cleanly instead of
+    # dying on the signal, which it reports as an error state.
+    signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(0))
     while True:
         try:
             cec = Cec(options)

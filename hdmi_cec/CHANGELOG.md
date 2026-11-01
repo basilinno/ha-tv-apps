@@ -5,6 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # Changelog
 
+## 0.2.1
+
+- Exit cleanly when the app is stopped, instead of ending in an error state.
+
 ## 0.2.0
 
 - Prebuilt image: installing no longer builds on the Pi.
