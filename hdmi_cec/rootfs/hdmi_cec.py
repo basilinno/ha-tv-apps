@@ -63,6 +63,7 @@ CEC_MODE_EXCL_FOLLOWER = 0x20
 CEC_EVENT_STATE_CHANGE = 1
 CEC_EVENT_LOST_MSGS = 2
 CEC_TX_STATUS_OK = 0x01
+CEC_RX_STATUS_OK = 0x01
 CEC_VERSION_1_4 = 5
 CEC_PHYS_ADDR_INVALID = 0xFFFF
 CEC_LOG_ADDR_INVALID = 0xFF
@@ -85,8 +86,15 @@ MSG_REPORT_AUDIO_STATUS = 0x7A
 MSG_GIVE_SYSTEM_AUDIO_MODE_STATUS = 0x7D
 MSG_SYSTEM_AUDIO_MODE_STATUS = 0x7E
 MSG_ACTIVE_SOURCE = 0x82
+MSG_REQUEST_ACTIVE_SOURCE = 0x85
 MSG_GIVE_DEVICE_POWER_STATUS = 0x8F
 MSG_REPORT_POWER_STATUS = 0x90
+POWER_ON = 0x00
+
+# After a wake, how long to wait for the TV to come up, and how long to keep
+# answering its <Request Active Source> with a switch to this input.
+TV_WAKE_TIMEOUT = 20
+ACTIVE_SOURCE_CLAIM = 30
 
 UI_KEYS = {0x41: "volume_up", 0x42: "volume_down", 0x43: "mute_toggle"}
 VOLUME_STEP = 5
@@ -103,8 +111,12 @@ class Adapter:
     def __init__(self, path):
         self.path = path
         self.fd = os.open(path, os.O_RDWR)
-        fcntl.ioctl(self.fd, CEC_S_MODE,
-                    struct.pack("<I", CEC_MODE_EXCL_INITIATOR | CEC_MODE_EXCL_FOLLOWER))
+        try:
+            fcntl.ioctl(self.fd, CEC_S_MODE,
+                        struct.pack("<I", CEC_MODE_EXCL_INITIATOR | CEC_MODE_EXCL_FOLLOWER))
+        except OSError:
+            os.close(self.fd)
+            raise
 
     def phys_addr(self):
         buf = bytearray(2)
@@ -157,6 +169,28 @@ class Adapter:
         log.debug("tx %x->%x 0x%02x %s status 0x%02x", src, dest, opcode,
                   bytes(params).hex(), tx_status)
         return ok
+
+    def power_status(self, dest=TV):
+        """Ask dest for its power status; None if it doesn't answer.
+
+        The core waits for <Report Power Status> itself (reply + timeout),
+        so the answer never reaches the follower loop.
+        """
+        src = self.log_addr()
+        if src == CEC_LOG_ADDR_INVALID:
+            return None
+        payload = bytes([(src << 4) | dest, MSG_GIVE_DEVICE_POWER_STATUS])
+        buf = bytearray(struct.pack(MSG_FMT, 0, 0, len(payload), 1000, 0, 0,
+                                    payload, MSG_REPORT_POWER_STATUS, 0, 0, 0, 0, 0, 0))
+        try:
+            fcntl.ioctl(self.fd, CEC_TRANSMIT, buf)
+        except OSError:
+            return None
+        fields = struct.unpack(MSG_FMT, buf)
+        length, msg, rx_status = fields[2], fields[6], fields[8]
+        if not rx_status & CEC_RX_STATUS_OK or length < 3:
+            return None
+        return msg[2]
 
     def receive(self):
         buf = bytearray(struct.calcsize(MSG_FMT))
@@ -211,8 +245,8 @@ class Cec:
         self.osd_name = options["osd_name"][:14]
         # Raspberry Pi Foundation's IEEE OUI, as cec_audio and cec-ctl use.
         self.vendor_id = 0x000C03
-        self.ha = HomeAssistant(options["event_type"])
         self.adapter = Adapter(options["device"])
+        self.ha = HomeAssistant(options["event_type"])
         # Volume as the TV is told it. The real volume lives wherever the
         # events are handled (e.g. a DSP), so this only keeps the TV's
         # on-screen bar moving.
@@ -220,6 +254,8 @@ class Cec:
         self.muted = False
         # Held while the address is borrowed, so requests don't interleave.
         self.lock = threading.Lock()
+        # Until then, the TV's <Request Active Source> gets this input.
+        self.claim_until = 0
         la = self.adapter.configure(self.device_type, self.osd_name, self.vendor_id)
         log.info("%s: %s \"%s\", logical address %s, physical address %s",
                  self.adapter.path, self.device_type, self.osd_name,
@@ -247,25 +283,62 @@ class Cec:
 
     def active_source(self):
         with self.lock:
-            self.adapter.transmit(TV, MSG_IMAGE_VIEW_ON)
-            pa = self.adapter.phys_addr()
-            if pa == CEC_PHYS_ADDR_INVALID:
-                # A TV that was off may only now report our address via EDID.
-                time.sleep(2)
-                pa = self.adapter.phys_addr()
-            if pa == CEC_PHYS_ADDR_INVALID:
-                return {"ok": False, "error": "no physical address"}
-            borrowed = self.device_type != "playback"
-            if borrowed:
-                self.adapter.configure("playback", self.osd_name, self.vendor_id)
-            ok = self.adapter.transmit(BROADCAST, MSG_ACTIVE_SOURCE, pa.to_bytes(2, "big"))
-            if borrowed:
-                # Give the TV time to act on it before the address goes away.
-                time.sleep(0.5)
-                self.adapter.configure(self.device_type, self.osd_name, self.vendor_id)
-            log.info("switched TV to this input (%s)%s", format_pa(pa),
-                     " from a borrowed playback address" if borrowed else "")
-            return {"ok": ok, "physical_address": format_pa(pa), "borrowed": borrowed}
+            self.claim_until = time.monotonic() + ACTIVE_SOURCE_CLAIM
+            ready = self.tv_ready(self.adapter.power_status())
+            woke = self.adapter.transmit(TV, MSG_IMAGE_VIEW_ON)
+            if not ready:
+                self.wait_for_tv(woke)
+            return self.switch_input()
+
+    def tv_ready(self, power):
+        """The TV is on and both our addresses are valid.
+
+        A TV that doesn't answer <Give Device Power Status> counts as on, so
+        it isn't kept waiting for an answer that never comes.
+        """
+        return (power in (POWER_ON, None)
+                and self.adapter.phys_addr() != CEC_PHYS_ADDR_INVALID
+                and self.adapter.log_addr() != CEC_LOG_ADDR_INVALID)
+
+    def wait_for_tv(self, woke):
+        """Wait for a TV that was off or booting to come up.
+
+        A Hisense drops the hot-plug signal while it boots, which takes the
+        Pi's physical and logical addresses away, and it ignores an
+        <Active Source> that arrives before it is up.
+        """
+        start = time.monotonic()
+        while time.monotonic() - start < TV_WAKE_TIMEOUT:
+            time.sleep(0.5)
+            if not woke and self.adapter.log_addr() != CEC_LOG_ADDR_INVALID:
+                # The first <Image View On> had no address to go out from.
+                woke = self.adapter.transmit(TV, MSG_IMAGE_VIEW_ON)
+            if self.tv_ready(self.adapter.power_status()) and woke:
+                log.info("TV up after %.1fs", time.monotonic() - start)
+                # It reports On a moment before it acts on input changes.
+                time.sleep(1)
+                return
+        log.warning("TV not up after %ds; switching anyway", TV_WAKE_TIMEOUT)
+
+    def switch_input(self):
+        pa = self.adapter.phys_addr()
+        if pa == CEC_PHYS_ADDR_INVALID:
+            return {"ok": False, "error": "no physical address"}
+        borrowed = self.device_type != "playback"
+        if borrowed:
+            self.adapter.configure("playback", self.osd_name, self.vendor_id)
+        ok = self.adapter.transmit(BROADCAST, MSG_ACTIVE_SOURCE, pa.to_bytes(2, "big"))
+        if borrowed:
+            # Give the TV time to act on it before the address goes away.
+            time.sleep(0.5)
+            self.adapter.configure(self.device_type, self.osd_name, self.vendor_id)
+        log.info("switched TV to this input (%s)%s", format_pa(pa),
+                 " from a borrowed playback address" if borrowed else "")
+        return {"ok": ok, "physical_address": format_pa(pa), "borrowed": borrowed}
+
+    def answer_request_active_source(self):
+        with self.lock:
+            self.switch_input()
 
     # --- the TV's messages ------------------------------------------------
     def report_audio_status(self, dest):
@@ -289,6 +362,13 @@ class Cec:
             self.ha.fire({"action": action})
             if audio:
                 self.report_audio_status(src)
+        elif opcode == MSG_REQUEST_ACTIVE_SOURCE:
+            # A TV that has just booted asks who the source is, and may
+            # ignore a switch that came earlier.
+            if time.monotonic() < self.claim_until:
+                log.info("TV asked for the active source")
+                threading.Thread(target=self.answer_request_active_source,
+                                 daemon=True).start()
         elif opcode == MSG_GIVE_DEVICE_POWER_STATUS:
             self.adapter.transmit(src, MSG_REPORT_POWER_STATUS, [0x00])
         elif not audio:
@@ -370,7 +450,15 @@ def main():
     logging.basicConfig(
         level=logging.DEBUG if options.get("debug") else logging.INFO,
         format="[hdmi_cec] %(levelname)s %(message)s")
-    cec = Cec(options)
+    while True:
+        try:
+            cec = Cec(options)
+            break
+        except OSError as e:
+            # EBUSY while another client (e.g. a Home Assistant integration
+            # being shut down) still holds the adapter exclusively.
+            log.warning("can't take %s: %s; retrying in 5s", options["device"], e)
+            time.sleep(5)
     serve_api(cec)
     cec.run()
 
