@@ -233,9 +233,44 @@ case "$VIDEO_SINK" in
     *)        VS="$VIDEO_SINK" ;;
 esac
 
+# --- audio ------------------------------------------------------------------
+# Home Assistant's default output on a Pi is the headphone jack, so unless an
+# output was picked in the app's Audio settings, pulsesink plays to the HDMI
+# port the TV is on. The Supervisor writes that pick into the app's
+# /etc/pulse/client.conf as default-sink, and leaves it out otherwise.
+chosen_sink() {
+    sed -nE 's/^[[:space:]]*default-sink[[:space:]]*=[[:space:]]*//p' /etc/pulse/client.conf 2>/dev/null \
+        | head -n1
+}
+
+# The HDMI sink of the connected port. vc4 numbers its connectors in the same
+# order as the HDMI audio devices' addresses (on a Pi 4, HDMI-A-1 is
+# fef00700 and HDMI-A-2 is fef05700), so the Nth connector is the Nth sink.
+hdmi_sink() {
+    local sinks connector n
+    sinks="$(pactl list short sinks 2>/dev/null | awk '$2 ~ /hdmi/ {print $2}' | sort)"
+    [[ -n "$sinks" ]] || return 1
+    connector="$(grep -lx connected /sys/class/drm/card*-HDMI-A-*/status 2>/dev/null | head -n1)"
+    n="$(sed -nE 's#.*-HDMI-A-([0-9]+)/status$#\1#p' <<< "$connector")"
+    sed -n "${n:-1}p" <<< "$sinks" | grep . || head -n1 <<< "$sinks"
+}
+
+AS="$AUDIO_SINK"
+if [[ "$AUDIO_SINK" == pulsesink ]]; then
+    sink="$(chosen_sink)"
+    if [[ -n "$sink" ]]; then
+        log "audio: $sink (picked in the app's Audio settings)"
+    elif sink="$(hdmi_sink)"; then
+        AS="pulsesink device=$sink"
+        log "audio: $sink (HDMI by default; pick another output in the app's Audio settings)"
+    else
+        log "audio: no HDMI output found; using Home Assistant's default output"
+    fi
+fi
+
 # -p: fixed legacy AirPlay ports (TCP 7000,7001,7100; UDP 6000,6001,7011)
 # instead of random ones, so firewalls and watch_console can rely on them.
-ARGS=(-n "$NAME" -nh -p -s "$RESOLUTION" -fps "$FPS" -vs "$VS" -as "$AUDIO_SINK")
+ARGS=(-n "$NAME" -nh -p -s "$RESOLUTION" -fps "$FPS" -vs "$VS" -as "$AS")
 
 software_decoder() {
     # Frame threading: in a live pipeline avdec_h264 otherwise uses slice

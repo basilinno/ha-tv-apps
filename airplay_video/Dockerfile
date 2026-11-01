@@ -13,6 +13,7 @@ RUN apt-get update \
         curl \
         dbus \
         jq \
+        pulseaudio-utils \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
         gstreamer1.0-plugins-bad \

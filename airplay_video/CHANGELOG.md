@@ -5,6 +5,12 @@ SPDX-License-Identifier: Apache-2.0
 
 # Changelog
 
+## 0.5.1
+
+- Play audio on the TV's HDMI port by default, instead of Home Assistant's
+  default output (the headphone jack on a Pi). An output picked in the app's Audio
+  settings still wins.
+
 ## 0.5.0
 
 - Prebuilt image: installing no longer builds on the Pi.

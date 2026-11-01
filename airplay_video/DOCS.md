@@ -25,10 +25,7 @@ it comes back when the session ends.
 ## Setup
 
 1. Install and start the app.
-2. **Audio:** on the app's page, open the **Audio** settings and pick the HDMI
-   output (on a Pi 4: `alsa_output.platform-fef00700.hdmi.hdmi-stereo`). Home
-   Assistant's default is the headphone jack, so without this the TV stays silent.
-3. On the iPhone: Control Centre → Screen Mirroring → pick the name you set
+2. On the iPhone: Control Centre → Screen Mirroring → pick the name you set
    (`AirPlay TV` by default).
 
 ## Options
@@ -40,12 +37,20 @@ it comes back when the session ends.
 | `decoder` | `software` | `software`: frame-threaded `avdec_h264`, smooth in portrait and landscape. `hardware`: the Pi 4's H.264 decoder; lighter on CPU, but portrait drops most frames |
 | `resolution` | `1920x1080` | Requested from the sender |
 | `fps` | `30` | Maximum frame rate |
-| `audio_sink` | `pulsesink` | `pulsesink` follows the app's Audio setting |
+| `audio_sink` | `pulsesink` | `pulsesink` plays to the HDMI port the TV is on, or to the output picked in the app's Audio settings |
 | `extra_args` | | Passed through to `uxplay` |
 | `debug` | `false` | UxPlay `-d` plus `GST_DEBUG=2`. Very verbose; it makes the video stutter |
 | `gst_debug` | | GStreamer log level on its own, e.g. `2` for warnings |
 | `cec_switch_input` | `true` | Wake the TV and switch it to the Pi's input over HDMI-CEC when mirroring starts |
 | `cec_device` | `/dev/cec0` | CEC adapter of the HDMI port the TV is on |
+
+## Audio
+
+Sound goes to the HDMI port the TV is on, so it plays on the TV (or whatever the TV
+passes it on to). To use another output, such as the headphone jack or a USB sound
+card, pick it in the **Audio** settings on the app's page; that choice always wins.
+The log shows which output is used, e.g.
+`audio: alsa_output.platform-fef00700.hdmi.hdmi-stereo (HDMI by default; ...)`.
 
 ## Switching the TV's input (HDMI-CEC)
 
@@ -73,8 +78,8 @@ address and then restores the original one.
 
 ## Troubleshooting
 
-- **No sound on the TV:** pick the HDMI output in the app's Audio settings (see
-  Setup).
+- **No sound on the TV:** check the `audio:` line in the app's log. If it names
+  another output, clear or change the output in the app's Audio settings.
 - **The receiver doesn't show up on the iPhone:** check that both are on the same
   network and that mDNS isn't blocked between them (guest networks, VLANs, client
   isolation).

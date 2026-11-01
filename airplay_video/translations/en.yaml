@@ -18,7 +18,7 @@ configuration:
     description: Highest frame rate requested from the sender.
   audio_sink:
     name: Audio output
-    description: GStreamer audio sink. pulsesink follows the app's Audio setting; pick the HDMI output there.
+    description: GStreamer audio sink. pulsesink plays to the TV's HDMI port, or to the output picked in the app's Audio settings.
   extra_args:
     name: Extra UxPlay arguments
     description: Passed through to uxplay as is.
